@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="OS-Memory: OS-centric personal memory via fast-slow hierarchical event graph, and the PMM-Bench benchmark.">
+<title>OS-Memory</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column (max 1000px); hero pairs the claim with a fragments→event trace; sections stack below. */
+:root{
+  --bg:#f2f4f7; --surface:#ffffff; --ink:#132030; --muted:#5a6878; --line:#d8dee6;
+  --accent:#0b7a83; --accent-soft:#d9eff0; --frag:#b8641c; --frag-soft:#f6e6d6; --paper:#ffffff;
+  --display:"Bricolage Grotesque", "IBM Plex Sans", system-ui, sans-serif;
+  --body:"IBM Plex Sans", system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  --mono:"IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f1720; --surface:#16212d; --ink:#e4eaf1; --muted:#97a5b5; --line:#2a3847;
+  --accent:#4cc3cc; --accent-soft:#143a40; --frag:#e19a5b; --frag-soft:#3a2a1c; --paper:#f4f6f8; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1720; --surface:#16212d; --ink:#e4eaf1; --muted:#97a5b5; --line:#2a3847;
+  --accent:#4cc3cc; --accent-soft:#143a40; --frag:#e19a5b; --frag-soft:#3a2a1c; --paper:#f4f6f8; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:16px/1.6 var(--body);padding-inline:16px}
+.wrap{max-width:1000px;margin:0 auto;padding-block:40px 64px;display:flex;flex-direction:column;gap:64px}
+a{color:var(--accent)}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.15}
+h1{font-size:clamp(2.2rem,5.5vw,3.5rem);font-weight:700;letter-spacing:-.02em}
+h2{font-size:1.6rem;font-weight:700}
+h3{font-size:1.05rem;font-weight:700}
+p{margin:0;max-width:68ch}
+.eyebrow{font:500 .75rem/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+section{display:flex;flex-direction:column;gap:20px}
+.hero{display:grid;grid-template-columns:1.05fr 1fr;gap:40px;align-items:center}
+.hero>*{min-width:0}
+.hero-text{display:flex;flex-direction:column;gap:18px}
+.sub{font-size:1.15rem;color:var(--muted)}
+.btns{display:flex;flex-wrap:wrap;gap:10px}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink);text-decoration:none;font-weight:500;font-size:.92rem}
+.btn.primary{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.btn .tag{font:500 .68rem var(--mono);color:var(--muted)}
+.btn.primary .tag{color:var(--bg);opacity:.7}
+.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.trace{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:12px;margin:0}
+.frags{display:flex;flex-direction:column;gap:6px}
+.frag{display:grid;grid-template-columns:48px 62px 1fr;gap:10px;align-items:baseline;font-size:.82rem;padding:6px 10px;border-radius:8px;background:var(--frag-soft)}
+.frag time{font:500 .75rem var(--mono);color:var(--frag)}
+.frag b{font:500 .72rem var(--mono);color:var(--muted)}
+.frag span{min-width:0}
+.arrow{font:500 .75rem var(--mono);color:var(--muted);text-align:center}
+.event{border:2px solid var(--accent);background:var(--accent-soft);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:4px}
+.event .k{font:500 .72rem var(--mono);color:var(--accent);letter-spacing:.06em;text-transform:uppercase}
+.event strong{font-family:var(--display);font-size:1.05rem}
+.event small{color:var(--muted);font-size:.8rem}
+.lead{font-size:1.08rem;max-width:none}
+.three{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.three>*{min-width:0}
+.cell{border-top:2px solid var(--ink);padding-top:12px;display:flex;flex-direction:column;gap:8px}
+.cell p{color:var(--muted);font-size:.93rem}
+figure.paperfig{margin:0;display:flex;flex-direction:column;gap:10px}
+figure.paperfig .img{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:12px;overflow:hidden}
+figure.paperfig img{display:block;width:100%;height:auto}
+figcaption{font-size:.85rem;color:var(--muted);max-width:none}
+.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:16px}
+.stat{border-top:2px solid var(--ink);padding-top:10px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.stat .n{font-family:var(--display);font-size:1.8rem;font-weight:700;font-variant-numeric:tabular-nums}
+.stat .l{font-size:.85rem;color:var(--muted)}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.step{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.step .when{font:500 .75rem var(--mono);color:var(--accent)}
+.step p{font-size:.92rem;color:var(--muted)}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:.9rem;min-width:640px}
+th,td{text-align:left;padding:9px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:500 .72rem var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;font-family:var(--mono);font-size:.85rem}
+tr.grp td{font:500 .72rem var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);background:var(--bg)}
+tr.ours td{background:var(--accent-soft);font-weight:600}
+tr.ours td:first-child{color:var(--accent)}
+tr:last-child td{border-bottom:0}
+.note{font-size:.88rem;color:var(--muted);border-left:3px solid var(--frag);padding:8px 14px;background:var(--surface);border-radius:0 8px 8px 0;max-width:none}
+.plug{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.plug>div{border-top:2px solid var(--ink);padding-top:10px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.plug .n{font-family:var(--display);font-size:1.5rem;font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums}
+.plug .l{font-size:.85rem;color:var(--muted)}
+footer{font-size:.82rem;color:var(--muted);border-top:1px solid var(--line);padding-top:20px}
+@media (max-width:760px){
+  .hero,.three,.steps,.plug{grid-template-columns:1fr}
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .frag{grid-template-columns:44px 1fr}
+  .frag b{display:none}
+}
+@media (prefers-reduced-motion:no-preference){
+  .frag{animation:rise .45s ease both}
+  .frag:nth-child(2){animation-delay:.06s}.frag:nth-child(3){animation-delay:.12s}.frag:nth-child(4){animation-delay:.18s}.frag:nth-child(5){animation-delay:.24s}.frag:nth-child(6){animation-delay:.3s}
+  @keyframes rise{from{transform:translateY(4px)}to{transform:none}}
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+<header class="hero">
+  <div class="hero-text">
+    <span class="eyebrow">Personal memory · Smartphone OS</span>
+    <h1>OS-Memory</h1>
+    <p class="sub">OS-Centric Personal Memory via Fast–Slow Hierarchical Event Graph</p>
+    <div class="btns">
+      <a class="btn primary" href="https://github.com/XiaoMi/os-memory">Code <span class="tag">GitHub</span></a>
+      <a class="btn" href="#pmm-bench">PMM-Bench</a>
+      <a class="btn" href="#results">Results</a>
+      <span class="btn">Paper <span class="tag">coming soon</span></span>
+    </div>
+  </div>
+  <figure class="trace" aria-label="Six records from five apps form one shopping event">
+    <span class="eyebrow">"Help me buy a stylus" · 6 records · 5 apps</span>
+    <div class="frags">
+      <div class="frag"><time>10:12</time><b>Taobao</b><span>Searched stylus</span></div>
+      <div class="frag"><time>10:28</time><b>PDD</b><span>Compared prices</span></div>
+      <div class="frag"><time>11:05</time><b>JD</b><span>Viewed product page</span></div>
+      <div class="frag"><time>11:20</time><b>Xianyu</b><span>Checked second-hand options</span></div>
+      <div class="frag"><time>12:10</time><b>SMS</b><span>Received a ¥30 coupon notification</span></div>
+      <div class="frag"><time>14:32</time><b>Payment</b><span>Completed a purchase, JD Payment ¥279</span></div>
+    </div>
+    <div class="arrow">↓ attribute by identifiers and semantics</div>
+    <div class="event">
+      <span class="k">Event · shopping</span>
+      <strong>Bought a stylus after comparing four platforms</strong>
+      <small>Every record stays linked as evidence</small>
+    </div>
+  </figure>
+</header>
+
+<section id="overview">
+  <span class="eyebrow">Overview</span>
+  <h2>Memory from the whole phone, organised as events</h2>
+  <p class="lead">Existing personal memory systems and benchmarks observe one interaction domain, such as dialogue or video. A smartphone OS records the full trajectory: conversations, orders, locations and screens scattered across apps, modalities and time. OS-Memory builds these traces into an evidence-grounded, event-centric hierarchical memory graph, and PMM-Bench evaluates memory systems on this setting.</p>
+  <div class="three">
+    <div class="cell"><h3>Fragment integration</h3><p>Screens, images, audio and system records are scattered across apps and modalities with no shared structure.</p></div>
+    <div class="cell"><h3>Event decoupling</h3><p>Several real-world events run at once, and their observations interleave along one timeline.</p></div>
+    <div class="cell"><h3>Immediate attribution</h3><p>Which event an observation belongs to often becomes clear only after later evidence arrives.</p></div>
+  </div>
+</section>
+
+<section id="pmm-bench">
+  <span class="eyebrow">Benchmark</span>
+  <h2>PMM-Bench</h2>
+  <p>Real system-level records from consenting Android users. Each participant reviewed the logged traces and confirmed their export. Annotators grouped operations into events across twelve user-need categories and wrote first-person questions, each with a reference answer and linked evidence.</p>
+  <div class="stats">
+    <div class="stat"><span class="n">20</span><span class="l">users</span></div>
+    <div class="stat"><span class="n">3.83M</span><span class="l">system-level records</span></div>
+    <div class="stat"><span class="n">685</span><span class="l">user-days</span></div>
+    <div class="stat"><span class="n">8</span><span class="l">daily scenarios</span></div>
+    <div class="stat"><span class="n">~2,000</span><span class="l">questions, 5 types</span></div>
+  </div>
+  <figure class="paperfig">
+    <div class="img"><img src="assets/fig1_overview.jpg" alt="PMM-Bench overview: record sources on the phone, data type composition and daily records by app for one user" loading="lazy"></div>
+    <figcaption>(a) Data type composition for a representative user. (b) Its records over time, by application.</figcaption>
+  </figure>
+  <figure class="paperfig">
+    <div class="img"><img src="assets/fig2_benchmark.jpg" alt="Domain-specific benchmarks versus PMM-Bench, evidence time spans, app counts and question-type distribution" loading="lazy"></div>
+    <figcaption>(a) A stylus-shopping example spans several apps, modalities and hours. (b) Evidence time spans and number of apps per question. (c) Question types: Single 27%, Cross 20%, Track 19%, Temp 17%, Habit 17%.</figcaption>
+  </figure>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>Benchmark</th><th>Source</th><th>Natural</th><th>Scale</th><th>Modality</th></tr></thead>
+      <tbody>
+        <tr class="grp"><td colspan="5">Dialogue</td></tr>
+        <tr><td>LoCoMo</td><td>Role-play dialogue</td><td>No</td><td>50 conv / 7.5k Q</td><td>T</td></tr>
+        <tr><td>LongMemEval</td><td>Assistant dialogue</td><td>No</td><td>500 Q / 1.5M tok</td><td>T</td></tr>
+        <tr><td>Mem-Gallery</td><td>Image–text dialogue</td><td>No</td><td>Multi-session</td><td>T, I</td></tr>
+        <tr class="grp"><td colspan="5">Digital footprint and file</td></tr>
+        <tr><td>AMA-Bench</td><td>Agent traces</td><td>Partly</td><td>Six domains</td><td>T</td></tr>
+        <tr><td>MobileMem</td><td>Mobile app traces</td><td>Partly</td><td>Long-horizon</td><td>T</td></tr>
+        <tr><td>MemGUI-Bench</td><td>Mobile GUI episodes</td><td>No</td><td>128 tasks / 26 apps</td><td>I, G</td></tr>
+        <tr><td>FileGramBench</td><td>File-system behavior</td><td>Partly</td><td>640 traces / 4.6k Q</td><td>T, I</td></tr>
+        <tr class="grp"><td colspan="5">Lifelog</td></tr>
+        <tr class="ours"><td>PMM-Bench</td><td>Smartphone OS lifelog</td><td>Yes</td><td>20 users / 3.83M rec</td><td>T, I, G, L, S</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note">Modalities: T text, I image, G interface actions, L location, S sensor. The raw records contain personal information. PMM-Bench is released in de-identified form under a research-only access agreement.</p>
+</section>
+
+<section id="method">
+  <span class="eyebrow">Method</span>
+  <h2>Fast attribution online, slow refinement later</h2>
+  <p>An observation must be processed when it arrives, yet its event, the event's boundary and its place in the hierarchy often settle only later. OS-Memory splits construction into three stages.</p>
+  <figure class="paperfig">
+    <div class="img"><img src="assets/fig3_method.jpg" alt="OS-Memory pipeline: standardize, fast mode with anchor-based relational events, slow mode with extraction and consolidation" loading="lazy"></div>
+  </figure>
+  <div class="steps">
+    <div class="step"><span class="when">1 · Standardize</span><h3>Atomic observations</h3><p>Device records become uniform observations (x, a, t, S, K): text, host app, time, strong identifiers and contextual keys. Screens are transcribed by a vision-language model.</p></div>
+    <div class="step"><span class="when">2 · Fast path</span><h3>DRED</h3><p>Dual-Rate Evidence-Deferred attribution keeps parallel events in one online pass, matches by identifier first, defers uncertain observations and runs without a generative LLM.</p></div>
+    <div class="step"><span class="when">3 · Slow path</span><h3>SAGE</h3><p>Split, Anchor, Ground, Extract. An LLM splits mixed events, writes summaries and topic anchors, extracts grounded facts and consolidates long-term memory across events.</p></div>
+  </div>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>Layer</th><th>Written by</th><th>Written from</th><th>Support</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Event</strong></td><td>DRED</td><td>Observations attributed online</td><td>Its observations</td></tr>
+        <tr><td><strong>Fact</strong></td><td>SAGE, ExtractFacts</td><td>A single event</td><td>A subset of that event's observations</td></tr>
+        <tr><td><strong>Long-term memory</strong></td><td>SAGE, consolidation</td><td>Events of an anchor neighbourhood</td><td>A set of events</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="results">
+  <span class="eyebrow">Results</span>
+  <h2>Best on all five question types</h2>
+  <p>Accuracy on PMM-Bench. Response model GPT-4.1-mini, judge GPT-4o. Judge is the unweighted mean of the five per-type scores.</p>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>Method</th><th class="num">Single</th><th class="num">Cross</th><th class="num">Temp</th><th class="num">Track</th><th class="num">Habit</th><th class="num">Judge</th><th class="num">F1</th></tr></thead>
+      <tbody>
+        <tr class="grp"><td colspan="8">References</td></tr>
+        <tr><td>Long context (128K)</td><td class="num">22.8</td><td class="num">4.2</td><td class="num">7.6</td><td class="num">5.9</td><td class="num">10.0</td><td class="num">10.1</td><td class="num">8.7</td></tr>
+        <tr><td>Flat dense retrieval</td><td class="num">43.6</td><td class="num">14.8</td><td class="num">19.2</td><td class="num">16.5</td><td class="num">19.7</td><td class="num">22.8</td><td class="num">19.9</td></tr>
+        <tr class="grp"><td colspan="8">Compact-entry memory</td></tr>
+        <tr><td>SimpleMem</td><td class="num">42.3</td><td class="num">25.4</td><td class="num">28.2</td><td class="num">26.8</td><td class="num">29.6</td><td class="num">30.5</td><td class="num">27.1</td></tr>
+        <tr><td>LightMem</td><td class="num">38.7</td><td class="num">22.6</td><td class="num">25.9</td><td class="num">24.3</td><td class="num">27.2</td><td class="num">27.7</td><td class="num">24.4</td></tr>
+        <tr><td>Mem0</td><td class="num">40.2</td><td class="num">18.9</td><td class="num">22.4</td><td class="num">19.6</td><td class="num">24.8</td><td class="num">25.2</td><td class="num">22.3</td></tr>
+        <tr class="grp"><td colspan="8">Relational memory</td></tr>
+        <tr><td>A-Mem</td><td class="num">41.5</td><td class="num">26.9</td><td class="num">29.4</td><td class="num">28.6</td><td class="num">30.8</td><td class="num">31.4</td><td class="num">27.9</td></tr>
+        <tr><td>StructMem</td><td class="num">40.9</td><td class="num">23.8</td><td class="num">27.6</td><td class="num">25.1</td><td class="num">27.9</td><td class="num">29.1</td><td class="num">25.8</td></tr>
+        <tr><td>CompassMem</td><td class="num">43.1</td><td class="num">30.2</td><td class="num">34.8</td><td class="num">33.5</td><td class="num">32.1</td><td class="num">34.7</td><td class="num">30.9</td></tr>
+        <tr><td>CompassMem + identifier index</td><td class="num">43.4</td><td class="num">35.6</td><td class="num">35.4</td><td class="num">35.9</td><td class="num">32.8</td><td class="num">36.6</td><td class="num">32.6</td></tr>
+        <tr class="ours"><td>OS-Memory</td><td class="num">48.2</td><td class="num">43.5</td><td class="num">41.1</td><td class="num">42.8</td><td class="num">40.6</td><td class="num">43.2</td><td class="num">38.4</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <h3>DRED as a plug-in</h3>
+  <p>Replacing each system's own segmentation with DRED, and changing nothing else, raises the overall Judge score.</p>
+  <div class="plug">
+    <div><span class="n">+3.2</span><span class="l">LightMem, 27.7 → 30.9</span></div>
+    <div><span class="n">+3.3</span><span class="l">StructMem, 29.1 → 32.4</span></div>
+    <div><span class="n">+3.5</span><span class="l">CompassMem, 34.7 → 38.2</span></div>
+  </div>
+  <p>On one participant's full stream, DRED groups 157,684 observations into 25,853 events covering 95.3% of observations; 26.2% of events combine evidence from several apps.</p>
+</section>
+
+<section id="code">
+  <span class="eyebrow">Code and data</span>
+  <h2>Release</h2>
+  <p>The repository will hold the OS-Memory package, the PMM-Bench evaluation toolkit with adapters for every baseline above, and a synthetic sample user for a quick start. Access to the de-identified PMM-Bench data is granted on request for research use.</p>
+</section>
+
+<footer>OS-Memory · PMM-Bench</footer>
+</div>
+</body>
+</html>

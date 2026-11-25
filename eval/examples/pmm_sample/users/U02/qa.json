@@ -1,0 +1,87 @@
+[
+  {
+    "query_id": "Q1",
+    "user_id": "U02",
+    "session_id": null,
+    "question": "我5月8日坐的是哪趟车、几车几座？",
+    "answers": [
+      "G15 次，5 车 08F，北京南开往上海虹桥。"
+    ],
+    "evidence_event_ids": [
+      "line:2",
+      "line:14"
+    ],
+    "category": "Single",
+    "metadata": {
+      "unanswerable": false
+    }
+  },
+  {
+    "query_id": "Q2",
+    "user_id": "U02",
+    "session_id": null,
+    "question": "电容笔最后在哪个平台买的，实付多少？",
+    "answers": [
+      "在京东购买，订单 JD7781，实付 249 元。"
+    ],
+    "evidence_event_ids": [
+      "line:12"
+    ],
+    "category": "Single",
+    "metadata": {
+      "unanswerable": false
+    }
+  },
+  {
+    "query_id": "Q4",
+    "user_id": "U02",
+    "session_id": null,
+    "question": "到上海虹桥站之后我接着做了什么？",
+    "answers": [
+      "打车从上海虹桥站到静安寺，实付 76 元。"
+    ],
+    "evidence_event_ids": [
+      "line:16",
+      "line:17"
+    ],
+    "category": "Temp",
+    "metadata": {
+      "unanswerable": false
+    }
+  },
+  {
+    "query_id": "Q6",
+    "user_id": "U02",
+    "session_id": null,
+    "question": "我在网上买数码配件通常怎么做？",
+    "answers": [
+      "先在淘宝搜索，再到拼多多、京东等平台比价，领券后在京东下单支付。"
+    ],
+    "evidence_event_ids": [
+      "line:8",
+      "line:12",
+      "line:20",
+      "line:22"
+    ],
+    "category": "Habit",
+    "metadata": {
+      "unanswerable": false
+    }
+  },
+  {
+    "query_id": "Q7",
+    "user_id": "U02",
+    "session_id": null,
+    "question": "羽毛球改到什么时候了？",
+    "answers": [
+      "改到周日下午三点。"
+    ],
+    "evidence_event_ids": [
+      "line:3"
+    ],
+    "category": "Single",
+    "metadata": {
+      "unanswerable": false
+    }
+  }
+]

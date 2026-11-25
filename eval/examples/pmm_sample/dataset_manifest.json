@@ -1,0 +1,32 @@
+{
+  "schema": "pmm-bench-package-v1",
+  "synthetic": true,
+  "users": [
+    {
+      "user_id": "U01",
+      "qa": "users/U01/qa.json",
+      "observations": "users/U01/observations.jsonl",
+      "observation_count": 22,
+      "cleaned_observations": "users/U01/data/cleaned_observations.jsonl",
+      "cleaned_event_count": 22,
+      "cleaned_sha256": "f79a4f6262b374fb64aad525b795c179132ec0773d794785c143c095536a3f6d",
+      "selected_months": [
+        "2026-05"
+      ],
+      "question_count": 8
+    },
+    {
+      "user_id": "U02",
+      "qa": "users/U02/qa.json",
+      "observations": "users/U02/observations.jsonl",
+      "observation_count": 22,
+      "cleaned_observations": "users/U02/data/cleaned_observations.jsonl",
+      "cleaned_event_count": 22,
+      "cleaned_sha256": "f79a4f6262b374fb64aad525b795c179132ec0773d794785c143c095536a3f6d",
+      "selected_months": [
+        "2026-05"
+      ],
+      "question_count": 5
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "name": "amem",
+  "display_name": "A-MEM",
+  "repository": "https://github.com/WujiangXu/A-mem-sys",
+  "commit": "f303dfc71e07bdc787f4bc135d4cea328ae30e99",
+  "source_dir": "systems/amem/source",
+  "status": "ready",
+  "python": ">=3.10",
+  "adapter": "hypereval.adapters.amem:AMEMAdapter"
+}

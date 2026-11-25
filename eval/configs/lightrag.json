@@ -1,0 +1,32 @@
+{
+  "_comment": "LightRAG 完整运行配置。run.py 读本文件, 把 {ROOT}=仓库根, {OUT_DIR}=本次运行输出目录 替换成实际路径。API key 由适配器从 OPENAI_API_KEY 环境变量读。LightRAG 纯 in-process (不起服务器): LLM 走 OpenAI 兼容网关, embedding 用本地 bge, 每个样本一个独立 working_dir ({OUT_DIR}/.lightrag/<sample_id>)。insert 阶段用 LLM 抽取实体/关系建图 (成本高); 检索用 aquery_data 只取上下文不生成答案。mode 可选 naive(纯向量,最省LLM)/local/global/hybrid/mix。",
+  "_dataset": "locomo",
+  "_data": {
+    "smoke": "{ROOT}/data/locomo/locomo1.json",
+    "full": "{ROOT}/data/locomo/locomo10.json"
+  },
+  "_sample_size": {
+    "smoke": 1,
+    "full": null
+  },
+  "_pythonpath": "{ROOT}/systems/lightrag/source",
+  "_extra_env": {
+    "TOKENIZERS_PARALLELISM": "false",
+    "HYPEREVAL_LLM_MIN_INTERVAL_SECONDS": "0.1"
+  },
+  "source_dir": "systems/lightrag/source",
+  "model": {
+    "provider": "openai",
+    "name": "azure_openai/gpt-4o-mini",
+    "api_key_env": "OPENAI_API_KEY",
+    "base_url_env": "OPENAI_BASE_URL"
+  },
+  "embedding_model": "{ROOT}/model/bge-base-en-v1.5",
+  "embedding_dim": 768,
+  "working_dir": "{OUT_DIR}/.lightrag",
+  "input_dir": "{OUT_DIR}/.lightrag_inputs",
+  "mode": "mix",
+  "top_k": 10,
+  "vlm_process_enable": true,
+  "gallerymem_process_options": "iF"
+}

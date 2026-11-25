@@ -1,0 +1,23 @@
+# LightRAG 依赖清单 (CPU 版) —— in-process 使用 LightRAG 核心库, 不起服务器
+# Python 要求: >=3.10
+#
+# 装法示例:
+#   conda create -n mb_lightrag python=3.10 -c conda-forge --override-channels -y
+#   conda activate mb_lightrag
+#   pip install torch --index-url https://download.pytorch.org/whl/cpu
+#   pip install -e ./systems/lightrag/source          # 装 lightrag-hku 及其 pyproject 依赖
+#   pip install -r requirements/lightrag.txt          # 本地 bge + 网关 LLM 所需的补充
+#
+# 说明:
+#   - lightrag 核心依赖 (nano-vectordb / networkx / numpy / pandas / tenacity / tiktoken /
+#     json_repair / pydantic / aiohttp 等) 由 `pip install -e ./systems/lightrag/source` 从其
+#     pyproject.toml 自动装, 本清单不重复列。
+#   - sentence-transformers + torch 用于本地 bge embedding (LightRAG 无内置本地 HF embedder,
+#     本适配器用 model/bge-base-en-v1.5 自定义 EmbeddingFunc)。
+#   - openai + tiktoken 用于 OpenAI 兼容网关 LLM (lightrag.llm.openai)。
+
+torch                       # CPU 版, 用 --index-url https://download.pytorch.org/whl/cpu
+sentence-transformers==5.1.1
+openai>=1.0
+tiktoken
+nltk>=3.8.1

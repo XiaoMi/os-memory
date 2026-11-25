@@ -1,0 +1,189 @@
+Changes made by the HyperOS-Mem / PMM-Bench authors to LightMem
+(https://github.com/zjunlp/LightMem) at commit 579ee76cede1cf7ee298716c9a8f1645a5b385bb.
+LightMem is licensed under MIT; this patch is distributed under the same license.
+Modified files:
+  src/lightmem/configs/memory_manager/base.py
+  src/lightmem/configs/pre_compressor/base.py
+  src/lightmem/configs/retriever/embeddingretriever/base.py
+  src/lightmem/configs/topic_segmenter/base.py
+  src/lightmem/factory/memory_manager/openai.py
+  src/lightmem/memory/lightmem.py
+  src/lightmem/memory/utils.py
+Applied by scripts/fetch_baselines.py. Text above the first 'diff --git' line is ignored by git apply.
+
+diff --git a/src/lightmem/configs/memory_manager/base.py b/src/lightmem/configs/memory_manager/base.py
+index b218c0b..f5ae306 100644
+--- a/src/lightmem/configs/memory_manager/base.py
++++ b/src/lightmem/configs/memory_manager/base.py
+@@ -3,6 +3,11 @@ from typing import Dict, Optional, Type, Any, List, ClassVar
+ from .base_config import BaseMemoryManagerConfig
+ 
+ 
++def _field_default(cls, name: str):
++    fields = getattr(cls, "__pydantic_fields__", None) or getattr(cls, "model_fields", None) or getattr(cls, "__fields__", {})
++    return fields[name].default
++
++
+ class MemoryManagerConfig(BaseModel):
+     model_name: str = Field(description="The memory management model or Deployment platform (e.g., 'openai', 'ollama'...)", default="openai")
+ 
+@@ -19,7 +24,7 @@ class MemoryManagerConfig(BaseModel):
+ 
+     @model_validator(mode='before')
+     def validate_model_name(cls, values):
+-        default_model = cls.__pydantic_fields__["model_name"].default
++        default_model = _field_default(cls, "model_name")
+         model_name = values.get("model_name", default_model)
+ 
+         if model_name not in cls._model_list:
+diff --git a/src/lightmem/configs/pre_compressor/base.py b/src/lightmem/configs/pre_compressor/base.py
+index 523bc3a..1a82946 100644
+--- a/src/lightmem/configs/pre_compressor/base.py
++++ b/src/lightmem/configs/pre_compressor/base.py
+@@ -2,6 +2,11 @@ from pydantic import BaseModel, Field, model_validator
+ from typing import Dict, Optional, Type, Any, Union, ClassVar
+ from importlib import import_module
+ 
++
++def _field_default(cls, name: str):
++    fields = getattr(cls, "__pydantic_fields__", None) or getattr(cls, "model_fields", None) or getattr(cls, "__fields__", {})
++    return fields[name].default
++
+ class PreCompressorConfig(BaseModel):
+     model_name: str = Field(
+         description="The Compressor model or Deployment platform (e.g., 'openai', 'deepseek', 'ollama', 'llmlingua-2')",
+@@ -20,7 +25,7 @@ class PreCompressorConfig(BaseModel):
+ 
+     @model_validator(mode='before')
+     def validate_model_name(cls, values):
+-        default_model = cls.__pydantic_fields__["model_name"].default
++        default_model = _field_default(cls, "model_name")
+         model_name = values.get("model_name", default_model)
+ 
+         if model_name not in cls._model_configs:
+diff --git a/src/lightmem/configs/retriever/embeddingretriever/base.py b/src/lightmem/configs/retriever/embeddingretriever/base.py
+index 80b2116..439fd59 100644
+--- a/src/lightmem/configs/retriever/embeddingretriever/base.py
++++ b/src/lightmem/configs/retriever/embeddingretriever/base.py
+@@ -2,6 +2,11 @@ from typing import Dict, Optional, ClassVar
+ from importlib import import_module
+ from pydantic import BaseModel, Field, model_validator
+ 
++
++def _field_default(cls, name: str):
++    fields = getattr(cls, "__pydantic_fields__", None) or getattr(cls, "model_fields", None) or getattr(cls, "__fields__", {})
++    return fields[name].default
++
+ class EmbeddingRetrieverConfig(BaseModel):
+     model_name: str = Field(
+         description="The embedding retriever or vector store (e.g., 'qdrant', 'chroma', 'upstash_vector')",
+@@ -16,7 +21,7 @@ class EmbeddingRetrieverConfig(BaseModel):
+ 
+     @model_validator(mode='before')
+     def validate_model_name(cls, values):
+-        default_model = cls.__pydantic_fields__["model_name"].default
++        default_model = _field_default(cls, "model_name")
+         model_name = values.get("model_name", default_model)
+ 
+         if model_name not in cls._model_list:
+diff --git a/src/lightmem/configs/topic_segmenter/base.py b/src/lightmem/configs/topic_segmenter/base.py
+index 1ef0783..97e7f6b 100644
+--- a/src/lightmem/configs/topic_segmenter/base.py
++++ b/src/lightmem/configs/topic_segmenter/base.py
+@@ -1,6 +1,11 @@
+ from pydantic import BaseModel, Field, model_validator
+ from typing import Dict, Optional, Type, Any, List, ClassVar
+ 
++
++def _field_default(cls, name: str):
++    fields = getattr(cls, "__pydantic_fields__", None) or getattr(cls, "model_fields", None) or getattr(cls, "__fields__", {})
++    return fields[name].default
++
+ class TopicSegmenterConfig(BaseModel):
+     model_name: str = Field(description="The TopicSegmenter model or Deployment platform (e.g., 'openai', 'deepseek', 'ollama', 'llmlingua-2')", default="llmlingua-2")
+ 
+@@ -12,7 +17,7 @@ class TopicSegmenterConfig(BaseModel):
+ 
+     @model_validator(mode='before')
+     def validate_model_name(cls, values):
+-        default_model = cls.__pydantic_fields__["model_name"].default
++        default_model = _field_default(cls, "model_name")
+         model_name = values.get("model_name", default_model)
+ 
+         if model_name not in cls._model_list:
+diff --git a/src/lightmem/factory/memory_manager/openai.py b/src/lightmem/factory/memory_manager/openai.py
+index 684e66f..43b3b24 100644
+--- a/src/lightmem/factory/memory_manager/openai.py
++++ b/src/lightmem/factory/memory_manager/openai.py
+@@ -131,13 +131,13 @@ class OpenaiManager:
+             params["tool_choice"] = tool_choice
+ 
+         response = self.client.chat.completions.create(**params)
++        usage = getattr(response, "usage", None)
+         usage_info = {
+-            "prompt_tokens": response.usage.prompt_tokens,
+-            "completion_tokens": response.usage.completion_tokens,
+-            "total_tokens": response.usage.total_tokens,
++            "prompt_tokens": getattr(usage, "prompt_tokens", 0) if usage is not None else 0,
++            "completion_tokens": getattr(usage, "completion_tokens", 0) if usage is not None else 0,
++            "total_tokens": getattr(usage, "total_tokens", 0) if usage is not None else 0,
+         }
+         parsed_response = self._parse_response(response, tools)
+-
+         return parsed_response, usage_info
+ 
+     def meta_text_extract(
+@@ -312,7 +312,9 @@ class OpenaiManager:
+             
+             return "\n".join(message_lines)
+ 
+-        max_workers = min(len(extract_list), 5)
++        configured_workers = int(os.getenv("LIGHTMEM_EXTRACT_MAX_WORKERS", "1"))
++        max_workers = max(1, min(len(extract_list), configured_workers))
++        print(f"[LightMem] extraction max_workers={max_workers} api_calls={len(extract_list)}", flush=True)
+ 
+         def process_segment_wrapper(args):
+             api_call_idx, api_call_segments = args
+diff --git a/src/lightmem/memory/lightmem.py b/src/lightmem/memory/lightmem.py
+index 860d8f7..427680c 100644
+--- a/src/lightmem/memory/lightmem.py
++++ b/src/lightmem/memory/lightmem.py
+@@ -594,7 +594,7 @@ class LightMemory:
+             if updated_entry is None:
+                 return
+             # ====== token consumption ======
+-            usage = updated_entry["usage"]
++            usage = updated_entry.get("usage") or {}
+             with token_lock:
+                 update_token_stats["calls"] += 1
+                 update_token_stats["prompt_tokens"] += usage.get("prompt_tokens", 0)
+diff --git a/src/lightmem/memory/utils.py b/src/lightmem/memory/utils.py
+index ccf2067..75270b7 100644
+--- a/src/lightmem/memory/utils.py
++++ b/src/lightmem/memory/utils.py
+@@ -384,17 +384,18 @@ def process_extraction_results(
+         if item is None:
+             continue
+         if "usage" in item:
+-            usage = item["usage"]
++            usage = item.get("usage") or {}
+             token_stats["add_memory_calls"] += 1
+             token_stats["add_memory_prompt_tokens"] += usage.get("prompt_tokens", 0)
+             token_stats["add_memory_completion_tokens"] += usage.get("completion_tokens", 0)
+             token_stats["add_memory_total_tokens"] += usage.get("total_tokens", 0)
+-            logger.info(
+-                f"[{call_id}] API Call {idx} tokens - "
+-                f"Prompt: {usage.get('prompt_tokens', 0)}, "
+-                f"Completion: {usage.get('completion_tokens', 0)}, "
+-                f"Total: {usage.get('total_tokens', 0)}"
+-            )
++            if logger:
++                logger.info(
++                    f"[{call_id}] API Call {idx} tokens - "
++                    f"Prompt: {usage.get('prompt_tokens', 0)}, "
++                    f"Completion: {usage.get('completion_tokens', 0)}, "
++                    f"Total: {usage.get('total_tokens', 0)}"
++                )
+         logger.debug(f"[{call_id}] API Call {idx} raw output: {item.get('output_prompt', 'N/A')}")
+         logger.debug(f"[{call_id}] API Call {idx} cleaned result: {item.get('cleaned_result', [])}")
+         

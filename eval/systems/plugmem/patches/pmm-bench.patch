@@ -1,0 +1,316 @@
+Changes made by the HyperOS-Mem / PMM-Bench authors to PlugMem
+(https://github.com/TIMAN-group/PlugMem) at commit 3b2ce75257d40bca8fac3f78e54e22ea41d92529.
+PlugMem is licensed under Apache-2.0; this patch is distributed under the same license.
+Modified files:
+  plugmem/core/memory.py
+  plugmem/core/memory_graph.py
+  plugmem/storage/chroma.py
+Applied by scripts/fetch_baselines.py. Text above the first 'diff --git' line is ignored by git apply.
+
+diff --git a/plugmem/core/memory.py b/plugmem/core/memory.py
+index 82eba02..40737c0 100644
+--- a/plugmem/core/memory.py
++++ b/plugmem/core/memory.py
+@@ -1,6 +1,9 @@
+ """Refactored Memory class — accepts injected LLMClient + EmbeddingClient."""
+ from __future__ import annotations
+ 
++import os
++from concurrent.futures import ThreadPoolExecutor
++from contextvars import copy_context
+ from typing import List, Optional
+ 
+ from plugmem.clients.embedding import EmbeddingClient, get_similarity
+@@ -15,6 +18,19 @@ from plugmem.inference.structuring import (
+ )
+ 
+ 
++def _submit_with_context(executor, function, *args, **kwargs):
++    context = copy_context()
++    return executor.submit(context.run, function, *args, **kwargs)
++
++
++def _embed_batch(embedder, texts):
++    chunk_size = max(1, int(os.getenv("PLUGMEM_EMBEDDING_BATCH_SIZE", "128")))
++    vectors = []
++    for start in range(0, len(texts), chunk_size):
++        vectors.extend(embedder.embed_batch(texts[start:start + chunk_size]))
++    return vectors
++
++
+ class Memory:
+     """Trajectory structuring pipeline.
+ 
+@@ -65,18 +81,34 @@ class Memory:
+             action_t0=action_t0,
+         )
+ 
+-        reward = get_reward(
+-            self.llm,
+-            goal=subgoal,
+-            state_t0=self.state_t0,
+-            action_t0=action_t0,
+-            observation_t1=observation_t1,
+-        )
++        with ThreadPoolExecutor(max_workers=2) as executor:
++            reward_future = _submit_with_context(
++                executor,
++                get_reward,
++                self.llm,
++                goal=subgoal,
++                state_t0=self.state_t0,
++                action_t0=action_t0,
++                observation_t1=observation_t1,
++            )
++            state_future = _submit_with_context(
++                executor,
++                get_state,
++                self.llm,
++                goal=self.goal,
++                state_t0=self.state_t0,
++                action_t0=action_t0,
++                observation_t1=observation_t1,
++            )
++            reward = reward_future.result()
++            next_state = state_future.result()
+ 
+         similarity_subgoal = -1.0
+         if self.trajectory:
+-            emb_prev = self.embedder.embed(self.trajectory[-1]["subgoal"])
+-            emb_curr = self.embedder.embed(subgoal)
++            emb_prev, emb_curr = _embed_batch(
++                self.embedder,
++                [self.trajectory[-1]["subgoal"], subgoal]
++            )
+             similarity_subgoal = get_similarity(emb_prev, emb_curr)
+             if similarity_subgoal < 0.75:
+                 self.memory["episodic"].append(self.trajectory)
+@@ -92,43 +124,86 @@ class Memory:
+             "time": self.time,
+         })
+ 
+-        self.state_t0 = get_state(
+-            self.llm,
+-            goal=self.goal,
+-            state_t0=self.state_t0,
+-            action_t0=action_t0,
+-            observation_t1=observation_t1,
+-        )
++        self.state_t0 = next_state
+         self.observation_t0 = observation_t1
+ 
+     def close(self) -> None:
+         self.memory["episodic"].append(self.trajectory)
+         self.trajectory = []
+ 
+-        for j, trajectory in enumerate(self.memory["episodic"]):
+-            trajectory_str = ""
+-            for i, step in enumerate(trajectory):
+-                trajectory_str += (
+-                    f"Step {i}:\n-State: {step['state']}\n"
++        trajectories = self.memory["episodic"]
++        worker_count = max(
++            1, int(os.getenv("PLUGMEM_STRUCTURING_WORKERS", "8"))
++        )
++        semantic_jobs = []
++        procedural_inputs = []
++        for trajectory_num, trajectory in enumerate(trajectories):
++            trajectory_parts = []
++            for turn_num, step in enumerate(trajectory):
++                trajectory_parts.append(
++                    f"Step {turn_num}:\n-State: {step['state']}\n"
+                     f"-Action: {step['action']}\n-Reward: {step['reward']}\n"
+                 )
+-                new_semantic = get_semantic(self.llm, step, j, i, self.time)
+-                self.memory["semantic"] += new_semantic
+-                for semantic_memory in new_semantic:
+-                    self.memory_embedding["semantic"].append({
+-                        "semantic_memory": self.embedder.embed(semantic_memory["semantic_memory"]),
+-                        "tags": [self.embedder.embed(tag) for tag in semantic_memory["tags"]],
+-                    })
+-
+-            procedural_memory, goal, _return = get_procedural(self.llm, trajectory=trajectory_str)
++                semantic_jobs.append((step, trajectory_num, turn_num))
++            procedural_inputs.append("".join(trajectory_parts))
++
++        with ThreadPoolExecutor(max_workers=worker_count) as executor:
++            semantic_futures = [
++                _submit_with_context(
++                    executor,
++                    get_semantic,
++                    self.llm,
++                    step,
++                    trajectory_num,
++                    turn_num,
++                    self.time,
++                )
++                for step, trajectory_num, turn_num in semantic_jobs
++            ]
++            procedural_futures = [
++                _submit_with_context(
++                    executor,
++                    get_procedural,
++                    self.llm,
++                    trajectory=trajectory_str,
++                )
++                for trajectory_str in procedural_inputs
++            ]
++            semantic_results = [future.result() for future in semantic_futures]
++            procedural_results = [future.result() for future in procedural_futures]
++
++        all_semantic = [item for result in semantic_results for item in result]
++        self.memory["semantic"] = all_semantic
++        embedding_texts = []
++        tag_counts = []
++        for semantic_memory in all_semantic:
++            embedding_texts.append(semantic_memory["semantic_memory"])
++            tag_counts.append(len(semantic_memory["tags"]))
++            embedding_texts.extend(semantic_memory["tags"])
++        embedding_vectors = _embed_batch(self.embedder, embedding_texts)
++        vector_index = 0
++        for tag_count in tag_counts:
++            semantic_vector = embedding_vectors[vector_index]
++            vector_index += 1
++            tag_vectors = embedding_vectors[vector_index:vector_index + tag_count]
++            vector_index += tag_count
++            self.memory_embedding["semantic"].append({
++                "semantic_memory": semantic_vector,
++                "tags": tag_vectors,
++            })
+ 
++        for trajectory_num, (procedural_memory, goal, _return) in enumerate(procedural_results):
+             self.memory["procedural"].append({
+                 "subgoal": goal,
+                 "procedural_memory": procedural_memory,
+-                "trajectory_num": j,
++                "trajectory_num": trajectory_num,
+                 "time": self.time,
+                 "return": _return,
+             })
+-            self.memory_embedding["procedural"].append({
+-                "subgoal": self.embedder.embed(goal),
+-            })
++        procedural_vectors = _embed_batch(
++            self.embedder,
++            [goal for _, goal, _ in procedural_results]
++        )
++        self.memory_embedding["procedural"] = [
++            {"subgoal": vector} for vector in procedural_vectors
++        ]
+diff --git a/plugmem/core/memory_graph.py b/plugmem/core/memory_graph.py
+index faa0fb4..30f3007 100644
+--- a/plugmem/core/memory_graph.py
++++ b/plugmem/core/memory_graph.py
+@@ -368,8 +368,13 @@ class MemoryGraph:
+         # Sessions view + recall audit to group nodes by run.
+         sid: Optional[str] = getattr(memory, "session_id", None)
+ 
++        def persist_batches(method, rows: List[Dict[str, Any]], batch_size: int = 1000) -> None:
++            for start in range(0, len(rows), batch_size):
++                method(self.graph_id, rows[start:start + batch_size])
++
+         # 1. Episodic nodes
+         episodic_nodes: List[List[EpisodicNode]] = []
++        episodic_rows: List[Dict[str, Any]] = []
+         for i, trajectory in enumerate(memory.memory["episodic"]):
+             episodic_nodes.append([])
+             for step in trajectory:
+@@ -394,17 +399,18 @@ class MemoryGraph:
+                 if sid is not None:
+                     self.session_ids.setdefault(sid, []).append(epis_node)
+ 
+-                self.storage.add_episodic(
+-                    self.graph_id,
+-                    episodic_id=epis_id,
+-                    observation=epis_node.observation,
+-                    action=epis_node.action,
+-                    time=epis_node.time,
+-                    session_id=sid,
+-                    subgoal=epis_node.subgoal,
+-                    state=epis_node.state,
+-                    reward=epis_node.reward,
+-                )
++                episodic_rows.append({
++                    "episodic_id": epis_id,
++                    "observation": epis_node.observation,
++                    "action": epis_node.action,
++                    "time": epis_node.time,
++                    "session_id": sid,
++                    "subgoal": epis_node.subgoal,
++                    "state": epis_node.state,
++                    "reward": epis_node.reward,
++                })
++
++        persist_batches(self.storage.add_episodic_batch, episodic_rows)
+ 
+         all_episodic_ids = [n.episodic_id for group in episodic_nodes for n in group]
+ 
+@@ -475,6 +481,7 @@ class MemoryGraph:
+             self.semantic_time += 1
+ 
+         # Persist semantic nodes with bro_semantic_ids
++        semantic_rows: List[Dict[str, Any]] = []
+         for sem_node in curr_sem_nodes:
+             bro_ids = [n.semantic_id for n in curr_sem_nodes if n.semantic_id != sem_node.semantic_id]
+             sem_node.bro_semantic_nodes = [self.semantic_id2node.get(bid) for bid in bro_ids if self.semantic_id2node.get(bid)]
+@@ -483,20 +490,20 @@ class MemoryGraph:
+             if isinstance(embedding_list, np.ndarray):
+                 embedding_list = embedding_list.tolist()
+ 
+-            self.storage.add_semantic(
+-                self.graph_id,
+-                semantic_id=sem_node.semantic_id,
+-                text=sem_node.semantic_memory_str,
+-                embedding=embedding_list,
+-                tags=sem_node.tags,
+-                tag_ids=[t.tag_id for t in sem_node.tag_nodes],
+-                time=sem_node.time,
+-                session_id=sid,
+-                episodic_ids=[e.episodic_id for e in sem_node.episodic_nodes],
+-                bro_semantic_ids=bro_ids,
+-                source=sem_node.source,
+-                confidence=sem_node.confidence,
+-            )
++            semantic_rows.append({
++                "semantic_id": sem_node.semantic_id,
++                "text": sem_node.semantic_memory_str,
++                "embedding": embedding_list,
++                "tags": sem_node.tags,
++                "tag_ids": [tag.tag_id for tag in sem_node.tag_nodes],
++                "time": sem_node.time,
++                "session_id": sid,
++                "episodic_ids": [node.episodic_id for node in sem_node.episodic_nodes],
++                "bro_semantic_ids": bro_ids,
++                "source": sem_node.source,
++                "confidence": sem_node.confidence,
++            })
++        persist_batches(self.storage.add_semantic_batch, semantic_rows)
+ 
+         # 3. Procedural + subgoal nodes
+         for proc_item, proc_emb_item in zip(
+diff --git a/plugmem/storage/chroma.py b/plugmem/storage/chroma.py
+index 2516179..b2a9f3f 100644
+--- a/plugmem/storage/chroma.py
++++ b/plugmem/storage/chroma.py
+@@ -353,6 +353,8 @@ class ChromaStorage:
+             session_id = node.get("session_id")
+             credibility = node.get("credibility", 10)
+             date = node.get("date", "")
++            source = node.get("source")
++            confidence = float(node.get("confidence", 0.5))
+             metadata = {
+                 "semantic_id": semantic_id,
+                 "tags": _serialize_list(tags or []),
+@@ -364,9 +366,12 @@ class ChromaStorage:
+                 "son_semantic_ids": _serialize_list(son_semantic_ids or []),
+                 "credibility": credibility,
+                 "date": date,
++                "confidence": confidence,
+             }
+             if session_id is not None:
+                 metadata["session_id"] = session_id
++            if source is not None:
++                metadata["source"] = source
+             ids.append(str(semantic_id))
+             documents.append(text)
+             metadatas.append(metadata)

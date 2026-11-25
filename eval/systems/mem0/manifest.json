@@ -1,0 +1,10 @@
+{
+  "name": "mem0",
+  "display_name": "Mem0",
+  "repository": "https://github.com/mem0ai/mem0",
+  "commit": "b357a5a1b03c299ec8229c268e63cfac0f7c6566",
+  "source_dir": "systems/mem0/source",
+  "status": "ready",
+  "python": ">=3.10",
+  "adapter": "hypereval.adapters.mem0:Mem0Adapter"
+}

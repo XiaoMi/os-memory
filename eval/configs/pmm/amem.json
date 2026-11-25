@@ -1,0 +1,22 @@
+{
+  "_comment": "Native construction config for PMM-Bench (Config A). Placeholders are filled by pmm_bench: {ROOT}, {BUILD_DIR}, {CONSTRUCTION_MODEL}, {EMBED_DIM}. api-embedder = the shared remote embedding API.",
+  "config": {
+    "source_dir": "{ROOT}/systems/amem/source",
+    "model_name": "api-embedder",
+    "llm_backend": "openai",
+    "llm_model": "{CONSTRUCTION_MODEL}",
+    "model": {
+      "provider": "openai",
+      "name": "{CONSTRUCTION_MODEL}",
+      "api_key_env": "OPENAI_API_KEY",
+      "base_url_env": "OPENAI_BASE_URL"
+    },
+    "evo_threshold": 100,
+    "consolidate": false
+  },
+  "extra_env": {
+    "HYPEREVAL_LLM_MIN_INTERVAL_SECONDS": "0.1",
+    "EMBEDDING_MODEL": "api-embedder",
+    "EMBEDDING_DIMENSION": "{EMBED_DIM}"
+  }
+}

@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pmm-bench"
+version = "1.0.0"
+description = "PMM-Bench evaluation toolkit: OS-Memory and memory-system baselines on smartphone OS lifelogs"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+requires-python = ">=3.10"
+dependencies = ["numpy>=1.24"]
+
+[project.scripts]
+pmm-bench = "pmm_bench.cli:main"
+hypereval = "hypereval.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["pmm_bench*", "hypereval*"]

@@ -1,0 +1,359 @@
+Changes made by the HyperOS-Mem / PMM-Bench authors to SimpleMem
+(https://github.com/aiming-lab/SimpleMem) at commit db80b6a7c591e0ea730a058e9f5fc4eb06572299.
+SimpleMem is licensed under MIT (OmniSimpleMem: Apache-2.0); this patch is distributed under the same license.
+Modified files:
+  OmniSimpleMem/benchmarks/memgallery/adapter.py
+  setup.py
+  simplemem/core/database/vector_store_backend.py
+  simplemem/core/hybrid_retriever.py
+  simplemem/text/system.py
+  tests/test_vector_store_backend.py
+Applied by scripts/fetch_baselines.py. Text above the first 'diff --git' line is ignored by git apply.
+
+diff --git a/OmniSimpleMem/benchmarks/memgallery/adapter.py b/OmniSimpleMem/benchmarks/memgallery/adapter.py
+index a26b6f4..2f43446 100644
+--- a/OmniSimpleMem/benchmarks/memgallery/adapter.py
++++ b/OmniSimpleMem/benchmarks/memgallery/adapter.py
+@@ -185,7 +185,7 @@ class OmniMemAdapter:
+         if not store_dir.exists():
+             return
+         for jsonl_file in sorted(store_dir.glob("*.jsonl")):
+-            with open(jsonl_file) as f:
++            with open(jsonl_file, encoding="utf-8") as f:
+                 for line in f:
+                     try:
+                         mau_data = json.loads(line.strip())
+@@ -198,6 +198,8 @@ class OmniMemAdapter:
+                             continue
+                         details = mau_data.get("details", {})
+                         full_text = details.get("full_text", "") if isinstance(details, dict) else ""
++                        if not full_text:
++                            full_text = str(mau_data.get("summary") or "")
+                         caption = ""
+                         if "image_caption:" in full_text:
+                             caption = full_text.split("image_caption:", 1)[1].strip()
+@@ -232,6 +234,8 @@ class OmniMemAdapter:
+         else:
+             indices = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:top_k]
+             indices = [i for i in indices if scores[i] > 0]
++        if not indices and len(scores):
++            indices = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:top_k]
+         results = []
+         for i in indices:
+             mau_id = self._image_bm25_mau_ids[i]
+@@ -256,7 +260,7 @@ class OmniMemAdapter:
+             store_dir = Path(self._data_dir) / "index" / "mau_store"
+             if store_dir.exists():
+                 for jsonl_file in sorted(store_dir.glob("*.jsonl")):
+-                    with open(jsonl_file) as f:
++                    with open(jsonl_file, encoding="utf-8") as f:
+                         for line in f:
+                             try:
+                                 mau_data = json.loads(line.strip())
+@@ -284,7 +288,8 @@ class OmniMemAdapter:
+         tokenized_query = _tokenize(query)
+         scores = self._bm25.get_scores(tokenized_query)
+         top_indices = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:top_k]
+-        return [self._bm25_mau_ids[i] for i in top_indices if scores[i] > 0]
++        positive = [self._bm25_mau_ids[i] for i in top_indices if scores[i] > 0]
++        return positive or [self._bm25_mau_ids[i] for i in top_indices]
+ 
+     def _get_dynamic_top_k(self, query: str, category: Optional[str]) -> int:
+         """Estimate optimal top_k based on query complexity and category."""
+@@ -418,6 +423,72 @@ class OmniMemAdapter:
+ 
+         return formatted
+ 
++    def recall_question(
++        self,
++        query: Any,
++        question_image_paths: Optional[List[str]] = None,
++    ) -> str:
++        """Recall with both the textual question and its original images."""
++        text_context = self.recall(query)
++        visual_context = self._recall_question_images(question_image_paths or [])
++        if text_context and visual_context:
++            return f"{text_context}\n\n{visual_context}"
++        return text_context or visual_context
++
++    def _recall_question_images(
++        self,
++        image_paths: List[str],
++        top_k: int = 30,
++    ) -> str:
++        """Search stored visual memories using the raw query-image embeddings."""
++        if self.orchestrator is None or not image_paths:
++            return ""
++
++        ranked: Dict[str, float] = {}
++        for image_path in image_paths:
++            path = Path(image_path)
++            if not path.exists():
++                continue
++            try:
++                embedding = self.orchestrator.image_processor.generate_embedding(path)
++                if not embedding:
++                    continue
++                for mau_id, score in self.orchestrator.vector_store.search_visual(
++                    embedding, top_k=top_k
++                ):
++                    ranked[mau_id] = max(ranked.get(mau_id, float("-inf")), score)
++            except Exception:
++                continue
++
++        if not ranked:
++            return ""
++
++        items = []
++        for mau_id, score in sorted(
++            ranked.items(), key=lambda item: item[1], reverse=True
++        )[:top_k]:
++            mau = self.orchestrator.mau_store.get(mau_id)
++            if mau is None:
++                continue
++            item = {
++                "id": mau.id,
++                "summary": mau.summary,
++                "modality_type": mau.modality_type.value,
++                "timestamp": mau.timestamp,
++                "score": score,
++                "tags": mau.metadata.tags,
++                "has_raw_data": mau.raw_pointer is not None,
++                "metadata": mau.metadata.to_dict(),
++            }
++            if mau.details and isinstance(mau.details, dict):
++                item["details"] = mau.details
++            items.append(item)
++
++        formatted = self._format_items(items)
++        if not formatted:
++            return ""
++        return "=== Visual Similarity Retrieval from Question Image ===\n" + formatted
++
+     def _recall_visual(self, query_text: str, category: str) -> str:
+         """Retrieval for VS (Visual Search) and VR (Visual Reasoning)."""
+         lines = []
+diff --git a/setup.py b/setup.py
+index e51428d..06089d9 100644
+--- a/setup.py
++++ b/setup.py
+@@ -35,6 +35,7 @@ INSTALL_REQUIRES = [
+     "dateparser>=1.1.0",       # simplemem/core/hybrid_retriever.py top-level import
+     "pyarrow>=12.0.0",         # simplemem/core/database/vector_store.py top-level import
+     "tantivy>=0.20.0",         # required at runtime by lancedb FTS (use_tantivy=True)
++    "pylance",                 # required by lancedb to build and query FTS indexes
+     # Used by evolver + multimodal (both included in default install)
+     "rank_bm25>=0.2.2",        # bm25 keyword retrieval (matches OmniSimpleMem upstream pin)
+     "tqdm>=4.60.0",            # progress bars in multimodal/evaluation/evaluator.py
+diff --git a/simplemem/core/database/vector_store_backend.py b/simplemem/core/database/vector_store_backend.py
+index fc6a11d..4622697 100644
+--- a/simplemem/core/database/vector_store_backend.py
++++ b/simplemem/core/database/vector_store_backend.py
+@@ -213,7 +213,10 @@ class LanceDBVectorStoreBackend:
+         if not keywords or self.count() == 0:
+             return []
+ 
+-        query = " ".join(keywords)
++        terms = [self._quote_fts_term(keyword) for keyword in keywords]
++        query = " ".join(term for term in terms if term)
++        if not query:
++            return []
+         results = self._rows_to_results(
+             self.table.search(query).limit(top_k).to_list(),
+             score_field="_score",
+@@ -298,6 +301,14 @@ class LanceDBVectorStoreBackend:
+     def _escape(value: Any) -> str:
+         return str(value).replace("'", "''")
+ 
++    @staticmethod
++    def _quote_fts_term(value: Any) -> str:
++        term = str(value).strip()
++        if not term:
++            return ""
++        escaped = term.replace("\\", "\\\\").replace('"', '\\"')
++        return f'"{escaped}"'
++
+     @staticmethod
+     def _rows_to_results(
+         rows: Sequence[Dict[str, Any]],
+diff --git a/simplemem/core/hybrid_retriever.py b/simplemem/core/hybrid_retriever.py
+index a92e51f..6b4ac6a 100644
+--- a/simplemem/core/hybrid_retriever.py
++++ b/simplemem/core/hybrid_retriever.py
+@@ -54,6 +54,14 @@ class HybridRetriever:
+         self.max_reflection_rounds = max_reflection_rounds if max_reflection_rounds is not None else getattr(config, 'MAX_REFLECTION_ROUNDS', 2)
+         self.enable_parallel_retrieval = enable_parallel_retrieval if enable_parallel_retrieval is not None else getattr(config, 'ENABLE_PARALLEL_RETRIEVAL', True)
+         self.max_retrieval_workers = max_retrieval_workers if max_retrieval_workers is not None else getattr(config, 'MAX_RETRIEVAL_WORKERS', 3)
++        self._retrieval_executor = (
++            concurrent.futures.ThreadPoolExecutor(
++                max_workers=self.max_retrieval_workers,
++                thread_name_prefix="simplemem-retrieval",
++            )
++            if self.enable_parallel_retrieval
++            else None
++        )
+ 
+     def retrieve(self, query: str, enable_reflection: Optional[bool] = None) -> List[MemoryEntry]:
+         """
+@@ -564,23 +572,23 @@ Return ONLY the JSON, no other text.
+         all_results = []
+         
+         try:
+-            # Use ThreadPoolExecutor for parallel retrieval
+-            with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_retrieval_workers) as executor:
+-                # Submit all search tasks
+-                future_to_query = {}
+-                for i, query in enumerate(search_queries, 1):
+-                    future = executor.submit(self._semantic_search_worker, query, i)
+-                    future_to_query[future] = (query, i)
+-                
+-                # Collect results as they complete
+-                for future in concurrent.futures.as_completed(future_to_query):
+-                    query, query_num = future_to_query[future]
+-                    try:
+-                        results = future.result()
+-                        all_results.extend(results)
+-                        print(f"[Parallel Search] Query {query_num} completed: {len(results)} results")
+-                    except Exception as e:
+-                        print(f"[Parallel Search] Query {query_num} failed: {e}")
++            executor = self._retrieval_executor
++            if executor is None:
++                raise RuntimeError("Parallel retrieval executor is unavailable")
++            future_to_query = {}
++            for i, query in enumerate(search_queries, 1):
++                future = executor.submit(self._semantic_search_worker, query, i)
++                future_to_query[future] = (query, i)
++
++            # Collect results as they complete
++            for future in concurrent.futures.as_completed(future_to_query):
++                query, query_num = future_to_query[future]
++                try:
++                    results = future.result()
++                    all_results.extend(results)
++                    print(f"[Parallel Search] Query {query_num} completed: {len(results)} results")
++                except Exception as e:
++                    print(f"[Parallel Search] Query {query_num} failed: {e}")
+                         
+         except Exception as e:
+             print(f"[Parallel Search] Parallel execution failed: {e}. Falling back to sequential search...")
+@@ -609,23 +617,23 @@ Return ONLY the JSON, no other text.
+         all_results = []
+         
+         try:
+-            # Use ThreadPoolExecutor for parallel retrieval
+-            with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_retrieval_workers) as executor:
+-                # Submit all search tasks
+-                future_to_query = {}
+-                for i, query in enumerate(additional_queries, 1):
+-                    future = executor.submit(self._additional_search_worker, query, i, round_num)
+-                    future_to_query[future] = (query, i)
+-                
+-                # Collect results as they complete
+-                for future in concurrent.futures.as_completed(future_to_query):
+-                    query, query_num = future_to_query[future]
+-                    try:
+-                        results = future.result()
+-                        all_results.extend(results)
+-                        print(f"[Reflection Round {round_num}] Additional query {query_num} completed: {len(results)} results")
+-                    except Exception as e:
+-                        print(f"[Reflection Round {round_num}] Additional query {query_num} failed: {e}")
++            executor = self._retrieval_executor
++            if executor is None:
++                raise RuntimeError("Parallel retrieval executor is unavailable")
++            future_to_query = {}
++            for i, query in enumerate(additional_queries, 1):
++                future = executor.submit(self._additional_search_worker, query, i, round_num)
++                future_to_query[future] = (query, i)
++
++            # Collect results as they complete
++            for future in concurrent.futures.as_completed(future_to_query):
++                query, query_num = future_to_query[future]
++                try:
++                    results = future.result()
++                    all_results.extend(results)
++                    print(f"[Reflection Round {round_num}] Additional query {query_num} completed: {len(results)} results")
++                except Exception as e:
++                    print(f"[Reflection Round {round_num}] Additional query {query_num} failed: {e}")
+                         
+         except Exception as e:
+             print(f"[Reflection Round {round_num}] Parallel execution failed: {e}. Falling back to sequential search...")
+@@ -646,6 +654,11 @@ Return ONLY the JSON, no other text.
+         """
+         print(f"[Additional Search {query_num}] {query}")
+         return self._semantic_search(query)
++
++    def close(self) -> None:
++        if self._retrieval_executor is not None:
++            self._retrieval_executor.shutdown(wait=True, cancel_futures=True)
++            self._retrieval_executor = None
+     
+     def _analyze_information_requirements(self, query: str) -> Dict[str, Any]:
+         """
+diff --git a/simplemem/text/system.py b/simplemem/text/system.py
+index 452ddb5..a33eb51 100644
+--- a/simplemem/text/system.py
++++ b/simplemem/text/system.py
+@@ -175,6 +175,16 @@ class SimpleMemSystem:
+         """
+         return self.vector_store.get_all_entries()
+ 
++    def close(self):
++        """Release reusable clients and retrieval workers."""
++        close_retriever = getattr(self.hybrid_retriever, "close", None)
++        if callable(close_retriever):
++            close_retriever()
++        client = getattr(self.llm_client, "client", None)
++        close_client = getattr(client, "close", None)
++        if callable(close_client):
++            close_client()
++
+     def print_memories(self):
+         """
+         Print all memory entries (for debugging)
+diff --git a/tests/test_vector_store_backend.py b/tests/test_vector_store_backend.py
+index 357c9c7..198bf1d 100644
+--- a/tests/test_vector_store_backend.py
++++ b/tests/test_vector_store_backend.py
+@@ -313,6 +313,15 @@ def test_lancedb_backend_preserves_semantic_and_keyword_score_order(lancedb_stor
+     assert keyword_results[0].score is not None
+ 
+ 
++def test_lancedb_backend_quotes_special_character_keyword_terms(lancedb_store):
++    results = lancedb_store.backend.keyword_search(
++        ["Apollo", "McGee's", "CS:GO", 'quoted "phrase"', r"C:\\temp"],
++        top_k=3,
++    )
++
++    assert [result.entry_id for result in results] == ["apollo"]
++
++
+ def test_custom_backend_owns_all_three_retrieval_paths(custom_store):
+     assert (
+         custom_store.semantic_search("coffee status", top_k=1)[0].entry_id == "coffee"
+@@ -396,3 +405,26 @@ def test_hybrid_retrieval_uses_custom_backend_for_all_paths(custom_store):
+     results = retriever.retrieve("coffee Apollo Carol")
+ 
+     assert [entry.entry_id for entry in results] == ["coffee", "apollo", "carol"]
++
++
++def test_parallel_retrieval_reuses_and_closes_executor(custom_store):
++    retriever = HybridRetriever(
++        llm_client=DeterministicLLM(),
++        vector_store=custom_store,
++        enable_planning=True,
++        enable_reflection=True,
++        enable_parallel_retrieval=True,
++        max_retrieval_workers=2,
++    )
++    executor = retriever._retrieval_executor
++    retriever._semantic_search = lambda query: []
++
++    assert retriever._execute_parallel_searches(["one", "two"]) == []
++    assert retriever._retrieval_executor is executor
++    assert retriever._execute_parallel_additional_searches(["three"], 1) == []
++    assert retriever._retrieval_executor is executor
++
++    retriever.close()
++
++    assert retriever._retrieval_executor is None
++    assert executor._shutdown

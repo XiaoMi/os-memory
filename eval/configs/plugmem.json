@@ -1,0 +1,36 @@
+{
+  "_comment": "PlugMem 完整运行配置。run.py 读本文件, 把 {ROOT}=仓库根, {OUT_DIR}=本次运行输出目录 替换成实际路径。API key 由适配器从 OPENAI_API_KEY 环境变量读。PlugMem 纯 in-process 使用 (不起 FastAPI 服务器): LLM 走 OpenAI 兼容网关, embedding 用本地 bge (embedding_model 指向仓库内 model/), 图存储持久化到本次运行目录下的 .chroma。写入走完整 structuring (每轮多次 LLM 调用, 复现论文, 成本高)。",
+  "_dataset": "locomo",
+  "_data": {
+    "smoke": "{ROOT}/data/locomo/locomo1.json",
+    "full": "{ROOT}/data/locomo/locomo10.json"
+  },
+  "_sample_size": {
+    "smoke": 1,
+    "full": null
+  },
+  "_pythonpath": "{ROOT}/systems/plugmem/source",
+  "_extra_env": {
+    "TOKENIZERS_PARALLELISM": "false",
+    "HYPEREVAL_LLM_MIN_INTERVAL_SECONDS": "0.1",
+    "PLUGMEM_STRUCTURING_WORKERS": "8",
+    "PLUGMEM_EMBEDDING_BATCH_SIZE": "128"
+  },
+  "source_dir": "systems/plugmem/source",
+  "model": {
+    "provider": "openai",
+    "name": "azure_openai/gpt-4o-mini",
+    "api_key_env": "OPENAI_API_KEY",
+    "base_url_env": "OPENAI_BASE_URL"
+  },
+  "embedding_model": "{ROOT}/model/bge-base-en-v1.5",
+  "embedding_cache_size": 32768,
+  "chroma_path": "{OUT_DIR}/.chroma",
+  "llm_cache_enabled": true,
+  "llm_cache_path": "{ROOT}/runs/full_official_matrix/plugmem_shared_llm_cache.sqlite3",
+  "llm_cache_seed_paths": [
+    "{ROOT}/runs/full_personamem-32k_plugmem/plugmem_llm_cache.sqlite3"
+  ],
+  "memory_goal": "Remember the conversation to answer questions later.",
+  "top_k": 10
+}

@@ -1,0 +1,25 @@
+# LightMem 依赖清单 (CPU 版) —— 对齐 systems/lightmem/source_selected/pyproject.toml
+# Python 要求: >=3.10,<3.12 (必须 3.10 或 3.11, 不能 3.12; 建议 3.11)
+#
+# 装法示例:
+#   conda create -n mb_lightmem python=3.11 -y && conda activate mb_lightmem
+#   pip install torch==2.8.0 --index-url https://download.pytorch.org/whl/cpu
+#   pip install -r requirements/lightmem.txt
+
+torch==2.8.0              # CPU 版, 用 --index-url https://download.pytorch.org/whl/cpu
+transformers==4.57.0
+sentence-transformers==5.1.1
+accelerate==1.10.1
+openai==2.3.0
+tiktoken==0.12.0
+llmlingua==0.2.2
+qdrant-client==1.15.1
+pydantic>=2.10
+numpy==2.2.6
+scipy==1.15.3
+scikit-learn==1.7.2
+nltk==3.9.2
+huggingface-hub==0.35.3
+safetensors==0.6.2
+PyYAML==6.0.3
+httpx>=0.27

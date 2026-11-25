@@ -1,0 +1,27 @@
+# SimpleMem 依赖清单 (CPU 版) —— 对齐 systems/simplemem/source/requirements.txt (Text Core 变体)
+# Python 要求: 建议 3.10
+#
+# 装法示例:
+#   conda create -n mb_simplemem python=3.10 -y && conda activate mb_simplemem
+#   pip install torch --index-url https://download.pytorch.org/whl/cpu
+#   pip install -r requirements/simplemem.txt
+
+torch                     # CPU 版, 用 --index-url https://download.pytorch.org/whl/cpu
+rank_bm25
+hf_xet
+faiss-cpu
+open_clip_torch
+torchvision
+sentence-transformers==5.1.1
+transformers==4.57.0
+lancedb==0.25.3
+tantivy
+pyarrow
+openai>=2.0
+litellm
+tiktoken==0.12.0
+pydantic>=2.10
+numpy
+scikit-learn
+nltk==3.9.2
+dateparser

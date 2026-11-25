@@ -1,0 +1,18 @@
+{
+  "user_id": "synthetic-browser-check-only",
+  "title": "合成页面检查（不是用户构建结果）",
+  "summary": {"observations": 2, "events": 1, "enriched_events": 1, "anchors": 1, "facts": 1, "long_memories": 0},
+  "nodes": [
+    {"id": "E-test", "type": "event", "label": "合成测试事件", "summary": "仅用于页面验收脚本测试。", "event_type": "synthetic", "enrichment_status": "ready", "start_time": "2026-05-01T00:00:00+00:00", "end_time": "2026-05-01T00:01:00+00:00", "member_count": 2},
+    {"id": "O-test-1", "type": "observation", "label": "测试观测一", "owner": "E-test", "app": "合成测试", "time": "2026-05-01T00:00:00+00:00"},
+    {"id": "O-test-2", "type": "observation", "label": "测试观测二", "owner": "E-test", "app": "合成测试", "time": "2026-05-01T00:01:00+00:00"},
+    {"id": "A-test", "type": "anchor", "label": "测试主题", "anchor_kind": "topic", "degree": 1},
+    {"id": "F-test", "type": "fact", "label": "合成测试事实", "tags": [], "support": ["O-test-1"]}
+  ],
+  "edges": [
+    {"source": "O-test-1", "target": "E-test", "type": "member_of"},
+    {"source": "O-test-2", "target": "E-test", "type": "member_of"},
+    {"source": "E-test", "target": "A-test", "type": "part-of"},
+    {"source": "F-test", "target": "E-test", "type": "fact_of"}
+  ]
+}

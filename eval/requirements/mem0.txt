@@ -1,0 +1,28 @@
+# Mem0 依赖清单 (CPU 版) —— 对齐 systems/mem0/source/pyproject.toml
+# Python 要求: >=3.10,<4.0 (建议 3.10)
+#
+# 装法示例:
+#   conda create -n mb_mem0 python=3.10 -y && conda activate mb_mem0
+#   pip install torch --index-url https://download.pytorch.org/whl/cpu   # 先装 CPU 版 torch
+#   pip install -r requirements/mem0.txt
+#   pip install -e ./systems/mem0/source --no-deps                       # 装 mem0 本体(生成 mem0ai 元数据)
+
+# --- CPU 版 torch: 必须用 pytorch 官方 CPU wheel 单独装(见上), 不要从默认源拉 ---
+torch                     # CPU 版, 用 --index-url https://download.pytorch.org/whl/cpu
+
+# --- 本地嵌入 ---
+sentence-transformers
+fastembed>=0.3.1
+
+# --- mem0 运行依赖 ---
+qdrant-client>=1.12.0
+pydantic>=2.7.3
+openai>=1.90.0
+httpx>=0.28.0
+posthog>=7.14.0
+pytz
+sqlalchemy>=2.0.31
+protobuf>=5.29.6,<7.0.0
+litellm
+spacy
+nltk>=3.8.1

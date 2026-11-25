@@ -1,0 +1,15 @@
+{
+  "name": "lightrag",
+  "display_name": "LightRAG",
+  "repository": "https://github.com/HKUDS/LightRAG",
+  "commit": "e66173cec29e33d093bbd89427861068c2268621",
+  "patches": [
+    "systems/lightrag/patches/pmm-bench.patch"
+  ],
+  "source_dir": "systems/lightrag/source",
+  "status": "ready",
+  "python": ">=3.10",
+  "adapter": "hypereval.adapters.lightrag:LightRAGAdapter",
+  "backend": "graph-rag",
+  "notes": "In-process use of LightRAG's core library (no server). Default local storage: JsonKV + nano-vectordb + networkx. Insert builds a graph via LLM entity/relation extraction (expensive); retrieval uses aquery_data (only_need_context, no answer generation). LLM via OpenAI-compatible gateway; embedding via the local bge model (custom EmbeddingFunc). Core API is async, wrapped with asyncio.run. Display media removed from upstream source per repo convention. Serves as a graph-RAG baseline."
+}

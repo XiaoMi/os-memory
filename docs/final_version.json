@@ -1,0 +1,50 @@
+{
+  "schema": "hyperos-mem-final-version-v1",
+  "system": "OS-Memory",
+  "method_version": "1.0.0",
+  "status": "final",
+  "canonical_name": "OS-Memory (DRED + SAGE)",
+  "authoritative_document": "docs/VERSION.md",
+  "library_entrypoint": "hypermem.HyperMemory",
+  "benchmark_entrypoint": "pmm_bench.final",
+  "canonical_source": ".",
+  "fast_path": {
+    "name": "DRED",
+    "source": "hypermem/online/engine.py"
+  },
+  "slow_path": {
+    "name": "SAGE",
+    "steps": [
+      {
+        "step": "idle boundary consolidation",
+        "source": "hypermem/online/consolidation.py"
+      },
+      {
+        "step": "ToolSAGE: SplitEvent, SummarizeEvent, ExtractFacts",
+        "source": "hypermem/online/sage_tools.py"
+      },
+      {
+        "step": "LongMemory consolidation and the Anchor/Fact/LongMemory layers",
+        "source": "hypermem/online/sage.py"
+      }
+    ]
+  },
+  "retrieval": "hypermem/online/hyperos_retrieval.py",
+  "orchestration": "eval/pmm_bench/pmm_benchmark.py (benchmark harness, in the eval tree)",
+  "stages": [
+    "prepare",
+    "dred",
+    "sage",
+    "dashboard",
+    "evaluate"
+  ],
+  "failure_policy": {
+    "module": "hypermem.online.failures",
+    "rule": "retry within budget, then skip and list in sage_report.json skipped_failures",
+    "service_failures": "hypermem.standardization.ModelServiceError spends no task budget and stops the build; rerunning the same steps resumes it",
+    "finished_states": [
+      "complete",
+      "complete_with_skipped_failures"
+    ]
+  }
+}

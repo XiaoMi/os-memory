@@ -1,0 +1,15 @@
+{
+  "name": "plugmem",
+  "display_name": "PlugMem",
+  "repository": "https://github.com/TIMAN-group/PlugMem",
+  "commit": "3b2ce75257d40bca8fac3f78e54e22ea41d92529",
+  "patches": [
+    "systems/plugmem/patches/pmm-bench.patch"
+  ],
+  "source_dir": "systems/plugmem/source",
+  "status": "ready",
+  "python": ">=3.10",
+  "adapter": "hypereval.adapters.plugmem:PlugMemAdapter",
+  "backend": "graph",
+  "notes": "In-process use of PlugMem's core library (no FastAPI server). Writes go through the full Memory structuring pipeline (per-turn LLM extraction, reproduces the paper). Embedding uses the local bge model via a custom EmbeddingClient subclass. Display media were removed from the upstream source per repo convention."
+}

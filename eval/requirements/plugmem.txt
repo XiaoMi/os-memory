@@ -1,0 +1,24 @@
+# PlugMem 依赖清单 (CPU 版) —— in-process 使用 PlugMem 核心库, 不起 FastAPI 服务器
+# Python 要求: >=3.10
+#
+# 装法示例:
+#   conda create -n mb_plugmem python=3.10 -y && conda activate mb_plugmem
+#   pip install torch --index-url https://download.pytorch.org/whl/cpu
+#   pip install -r requirements/plugmem.txt
+#
+# 说明:
+#   - chromadb / openai / numpy / pyyaml 是 PlugMem 核心库运行所需 (见其 pyproject.toml)。
+#   - sentence-transformers + torch 用于本地 bge embedding (PlugMem 无内置本地 HF embedder,
+#     本适配器用 model/bge-base-en-v1.5 补一个)。
+#   - fastapi/uvicorn 不装: 我们纯 in-process 用, 不起服务器。
+
+torch                       # CPU 版, 用 --index-url https://download.pytorch.org/whl/cpu
+sentence-transformers==5.1.1
+transformers==4.57.0
+chromadb>=0.5
+openai>=1.0
+numpy>=1.24
+pyyaml>=6.0
+requests>=2.28
+nltk>=3.8.1
+tiktoken>=0.7

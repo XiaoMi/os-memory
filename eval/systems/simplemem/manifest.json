@@ -1,0 +1,14 @@
+{
+  "name": "simplemem",
+  "display_name": "SimpleMem",
+  "repository": "https://github.com/aiming-lab/SimpleMem",
+  "commit": "db80b6a7c591e0ea730a058e9f5fc4eb06572299",
+  "patches": [
+    "systems/simplemem/patches/pmm-bench.patch"
+  ],
+  "source_dir": "systems/simplemem/source",
+  "status": "ready",
+  "python": ">=3.10",
+  "adapter": "hypereval.adapters.simplemem:SimpleMemAdapter",
+  "backend": "text + Omni-SimpleMem multimodal"
+}

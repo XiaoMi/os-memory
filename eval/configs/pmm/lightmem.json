@@ -1,0 +1,81 @@
+{
+  "_comment": "Native construction config for PMM-Bench (Config A). Placeholders are filled by pmm_bench: {ROOT}, {BUILD_DIR}, {CONSTRUCTION_MODEL}, {EMBED_DIM}. api-embedder = the shared remote embedding API.",
+  "config": {
+    "source_dir": "{ROOT}/systems/lightmem/source_selected",
+    "offline_update_all": true,
+    "model": {
+      "provider": "openai",
+      "name": "{CONSTRUCTION_MODEL}",
+      "api_key_env": "OPENAI_API_KEY",
+      "base_url_env": "OPENAI_BASE_URL"
+    },
+    "lightmem": {
+      "pre_compress": true,
+      "pre_compressor": {
+        "model_name": "llmlingua-2",
+        "configs": {
+          "llmlingua_config": {
+            "model_name": "{ROOT}/model/llmlingua-2-bert-base-multilingual-cased-meetingbank",
+            "device_map": "cpu",
+            "use_llmlingua2": true
+          },
+          "llmlingua2_config": {
+            "max_batch_size": 50,
+            "max_force_token": 100
+          },
+          "compress_config": {
+            "instruction": "",
+            "rate": 0.8,
+            "target_token": -1
+          }
+        }
+      },
+      "topic_segment": true,
+      "topic_segmenter": {
+        "model_name": "llmlingua-2",
+        "configs": {}
+      },
+      "precomp_topic_shared": true,
+      "messages_use": "user_only",
+      "metadata_generate": true,
+      "text_summary": true,
+      "memory_manager": {
+        "model_name": "openai",
+        "configs": {
+          "model": "{CONSTRUCTION_MODEL}",
+          "num_gpu": -1,
+          "max_tokens": 4096
+        }
+      },
+      "extract_threshold": 0.1,
+      "index_strategy": "embedding",
+      "text_embedder": {
+        "model_name": "huggingface",
+        "configs": {
+          "model": "api-embedder",
+          "embedding_dims": "{EMBED_DIM}",
+          "model_kwargs": {
+            "device": "cpu"
+          }
+        }
+      },
+      "retrieve_strategy": "embedding",
+      "embedding_retriever": {
+        "model_name": "qdrant",
+        "configs": {
+          "collection_name": "memorybench_lightmem",
+          "embedding_model_dims": "{EMBED_DIM}",
+          "path": "{BUILD_DIR}/.qdrant",
+          "on_disk": true
+        }
+      },
+      "update": "offline"
+    }
+  },
+  "extra_env": {
+    "LLMLINGUA_PATH": "{ROOT}/model/llmlingua-2-bert-base-multilingual-cased-meetingbank",
+    "HYPEREVAL_LLM_MIN_INTERVAL_SECONDS": "0.1",
+    "EMBEDDING_MODEL": "api-embedder",
+    "EMBEDDING_DIMENSION": "{EMBED_DIM}"
+  }
+}

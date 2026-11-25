@@ -1,0 +1,9 @@
+/runs/
+/model/
+/data/
+*.sqlite
+*.sqlite3
+.env
+__pycache__/
+*.pyc
+docs/page.html

@@ -1,0 +1,2 @@
+# HyperOS-Mem needs Python >=3.10 and NumPy.
+numpy>=1.24

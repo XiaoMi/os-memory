@@ -1,0 +1,18 @@
+# A-MEM 依赖清单 (CPU 版) —— 对齐 systems/amem/source/requirements.txt
+# Python 要求: >=3.8 (建议 3.10, 与其它系统对齐)
+#
+# 装法示例:
+#   conda create -n mb_amem python=3.10 -y && conda activate mb_amem
+#   pip install torch --index-url https://download.pytorch.org/whl/cpu
+#   pip install -r requirements/amem.txt
+
+torch                     # CPU 版, 用 --index-url https://download.pytorch.org/whl/cpu
+sentence-transformers>=2.2.2
+chromadb>=0.4.22
+rank_bm25>=0.2.2
+nltk>=3.8.1
+transformers>=4.36.2
+litellm>=1.16.11
+numpy>=1.24.3
+scikit-learn>=1.3.2
+openai>=1.3.7

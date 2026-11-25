@@ -1,0 +1,10 @@
+{
+  "name": "mock",
+  "display_name": "Deterministic Mock Retriever",
+  "repository": null,
+  "commit": null,
+  "source_dir": null,
+  "status": "ready",
+  "python": ">=3.10",
+  "adapter": "hypereval.adapters.mock:MockMemoryAdapter"
+}

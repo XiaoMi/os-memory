@@ -1,0 +1,42 @@
+Copyright (C) 2026 Xiaomi Corporation.
+
+OS-Memory is an open source project by Xiaomi Corporation,
+supported by Beijing Tongming Lake Information Technology Application
+Innovation Center (TLAIC).
+
+This product is licensed under the Apache License, Version 2.0.
+You may obtain a copy of the License in the LICENSE file or at
+http://www.apache.org/licenses/LICENSE-2.0
+
+This product includes third-party software components. Each component
+is subject to its own license, as listed below.
+
+--------------------------------------------------------------------
+Third-party components
+--------------------------------------------------------------------
+The source code of the baseline systems below is not distributed with
+this product. eval/scripts/fetch_baselines.py downloads each one from its
+upstream repository at the commit listed in eval/systems/<name>/manifest.json.
+This product distributes only patches containing modifications to their
+files (eval/systems/<name>/patches/pmm-bench.patch). Each patch is
+distributed under the license of the project it modifies.
+
+LightMem (https://github.com/zjunlp/LightMem)
+  License: MIT
+  Copyright (c) 2025 ZJUNLP
+
+LightRAG (https://github.com/HKUDS/LightRAG)
+  License: MIT
+  Copyright (c) 2025 LightRAG Team
+
+PlugMem (https://github.com/TIMAN-group/PlugMem)
+  License: Apache-2.0
+  Copyright the PlugMem authors
+
+SimpleMem (https://github.com/aiming-lab/SimpleMem)
+  License: MIT
+  Copyright (c) 2025 AIMING Lab
+
+The baselines A-MEM (https://github.com/WujiangXu/A-mem-sys, MIT) and
+Mem0 (https://github.com/mem0ai/mem0, Apache-2.0) are fetched unmodified;
+no part of them is distributed with this product.

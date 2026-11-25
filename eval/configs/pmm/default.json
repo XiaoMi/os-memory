@@ -1,0 +1,80 @@
+{
+  "_comment": "PMM-Bench evaluation settings. Endpoints and keys come from environment variables; never write keys here.",
+  "input": "cleaned",
+  "models": {
+    "construction": "gpt-4.1-mini",
+    "answer": "gpt-4.1-mini",
+    "judge": "gpt-4o"
+  },
+  "llm": {
+    "base_url_env": "OPENAI_BASE_URL",
+    "api_key_env": "OPENAI_API_KEY",
+    "timeout": 180,
+    "retries": 2
+  },
+  "embedding": {
+    "url_env": "PMM_EMBEDDING_URL",
+    "model_env": "PMM_EMBEDDING_MODEL",
+    "api_key_env": "PMM_EMBEDDING_API_KEY",
+    "dimension": 3584,
+    "batch_size": 16
+  },
+  "retrieval": {
+    "top_k": 30,
+    "context_chars": 48000
+  },
+  "answer_max_tokens": 2048,
+  "judge_max_tokens": 8192,
+  "systems": {
+    "hyperos-mem": {
+      "kind": "hyperos",
+      "display": "OS-Memory"
+    },
+    "mem0": {
+      "kind": "adapter",
+      "display": "Mem0",
+      "config": "configs/pmm/mem0.json"
+    },
+    "simplemem": {
+      "kind": "adapter",
+      "display": "SimpleMem",
+      "config": "configs/pmm/simplemem.json"
+    },
+    "lightmem": {
+      "kind": "adapter",
+      "display": "LightMem",
+      "config": "configs/pmm/lightmem.json"
+    },
+    "amem": {
+      "kind": "adapter",
+      "display": "A-Mem",
+      "config": "configs/pmm/amem.json"
+    },
+    "plugmem": {
+      "kind": "adapter",
+      "display": "PlugMem",
+      "config": "configs/pmm/plugmem.json"
+    },
+    "structmem": {
+      "kind": "pending",
+      "display": "StructMem"
+    },
+    "compassmem": {
+      "kind": "pending",
+      "display": "CompassMem"
+    },
+    "flat-dense": {
+      "kind": "pending",
+      "display": "Flat dense retrieval"
+    },
+    "long-context": {
+      "kind": "pending",
+      "display": "Long context (128K)"
+    },
+    "mock": {
+      "kind": "adapter",
+      "adapter": "mock",
+      "display": "Lexical mock retriever (pipeline check only)"
+    }
+  }
+}

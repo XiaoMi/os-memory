@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hyperos-mem"
+version = "1.0.0"
+description = "OS-Memory: OS-centric personal memory via DRED (fast path) + SAGE (slow path)"
+readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+requires-python = ">=3.10"
+dependencies = ["numpy>=1.24"]
+
+[project.optional-dependencies]
+# MCP server (add / build / search / read / status tools for MCP clients); the core library does not need it.
+# Verified with mcp 1.30 (FastMCP) and 2.3 (MCPServer).
+mcp = ["mcp>=1.30"]
+
+[project.scripts]
+hyperos-mem-mcp = "hypermem.mcp_server:main"
+
+[tool.setuptools.packages.find]
+include = ["hypermem*"]

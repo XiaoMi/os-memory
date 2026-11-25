@@ -1,0 +1,37 @@
+Changes made by the HyperOS-Mem / PMM-Bench authors to LightRAG
+(https://github.com/HKUDS/LightRAG) at commit e66173cec29e33d093bbd89427861068c2268621.
+LightRAG is licensed under MIT; this patch is distributed under the same license.
+Modified files:
+  lightrag/file_atomic.py
+Applied by scripts/fetch_baselines.py. Text above the first 'diff --git' line is ignored by git apply.
+
+diff --git a/lightrag/file_atomic.py b/lightrag/file_atomic.py
+index a07598f08..056a5302c 100644
+--- a/lightrag/file_atomic.py
++++ b/lightrag/file_atomic.py
+@@ -42,6 +42,8 @@ logger = logging.getLogger("lightrag")
+ # an in-flight write from another live process cannot plausibly still be
+ # running (multi-million-node graphml writes finish in minutes, not hours).
+ TMP_REAP_AGE_SECONDS = 3600
++WINDOWS_REPLACE_RETRIES = 8
++WINDOWS_REPLACE_DELAY_SECONDS = 0.1
+ 
+ 
+ def tmp_path_for(file_name: str) -> str:
+@@ -130,7 +132,15 @@ def atomic_write(
+     try:
+         write_fn(tmp)
+         _preserve_mode(tmp, file_name, workspace)
+-        os.replace(tmp, file_name)
++        replace_attempts = WINDOWS_REPLACE_RETRIES if os.name == "nt" else 1
++        for attempt in range(replace_attempts):
++            try:
++                os.replace(tmp, file_name)
++                break
++            except PermissionError:
++                if attempt + 1 >= replace_attempts:
++                    raise
++                time.sleep(WINDOWS_REPLACE_DELAY_SECONDS * (attempt + 1))
+     except BaseException:
+         try:
+             if os.path.exists(tmp):

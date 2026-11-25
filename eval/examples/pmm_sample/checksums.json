@@ -1,0 +1,34 @@
+{
+  "users/U01/qa.json": {
+    "sha256": "b1c12094a413232d122e7d1a4b58b48a1e97b76f495f81c5f86d032589ec597c",
+    "bytes": 3266
+  },
+  "users/U01/observations.jsonl": {
+    "sha256": "2503e4d337f82ebc07355c337735fb446677cef79e0832fed5bf8b0b3cec5413",
+    "bytes": 13373
+  },
+  "users/U01/data/raw_source.jsonl": {
+    "sha256": "8a1bb0629ae45d411b47b18f84310aa3457eff1edcf46c621daab02bb446e99f",
+    "bytes": 6305
+  },
+  "users/U01/data/cleaned_observations.jsonl": {
+    "sha256": "f79a4f6262b374fb64aad525b795c179132ec0773d794785c143c095536a3f6d",
+    "bytes": 9832
+  },
+  "users/U02/qa.json": {
+    "sha256": "832a627a61180eceeb7ef5e0cfe98b2b04492fa56f35b1e2145ce1e494812f1e",
+    "bytes": 1885
+  },
+  "users/U02/observations.jsonl": {
+    "sha256": "e69ef3510ea7c94f5feaf8d909cfeb21d52ff288c05ee764b264415e2fff82d8",
+    "bytes": 13373
+  },
+  "users/U02/data/raw_source.jsonl": {
+    "sha256": "8a1bb0629ae45d411b47b18f84310aa3457eff1edcf46c621daab02bb446e99f",
+    "bytes": 6305
+  },
+  "users/U02/data/cleaned_observations.jsonl": {
+    "sha256": "f79a4f6262b374fb64aad525b795c179132ec0773d794785c143c095536a3f6d",
+    "bytes": 9832
+  }
+}

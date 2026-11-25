@@ -1,0 +1,14 @@
+{
+  "name": "lightmem",
+  "display_name": "LightMem",
+  "repository": "https://github.com/zjunlp/LightMem",
+  "commit": "579ee76cede1cf7ee298716c9a8f1645a5b385bb",
+  "patches": [
+    "systems/lightmem/patches/pmm-bench.patch"
+  ],
+  "source_dir": "systems/lightmem/source_selected",
+  "status": "ready",
+  "python": ">=3.10,<3.12",
+  "adapter": "hypereval.adapters.lightmem:LightMemAdapter",
+  "notes": "Upstream LightMem at the pinned commit (includes the em2mem and fluxmem packages), with patches/pmm-bench.patch applied."
+}

@@ -1,0 +1,26 @@
+{
+  "_comment": "Native construction config for PMM-Bench (Config A). Placeholders are filled by pmm_bench: {ROOT}, {BUILD_DIR}, {CONSTRUCTION_MODEL}, {EMBED_DIM}. api-embedder = the shared remote embedding API.",
+  "config": {
+    "source_dir": "{ROOT}/systems/simplemem/source",
+    "omni_source_dir": "{ROOT}/systems/simplemem/source/OmniSimpleMem",
+    "model": {
+      "provider": "openai",
+      "name": "{CONSTRUCTION_MODEL}",
+      "api_key_env": "OPENAI_API_KEY",
+      "base_url_env": "OPENAI_BASE_URL"
+    },
+    "db_path": "{BUILD_DIR}/.lancedb",
+    "table_name": "memory_entries",
+    "clear_db": false,
+    "enable_thinking": false,
+    "use_streaming": false,
+    "enable_planning": true,
+    "enable_reflection": true,
+    "max_reflection_rounds": 2
+  },
+  "extra_env": {
+    "EMBEDDING_MODEL": "api-embedder",
+    "EMBEDDING_DIMENSION": "{EMBED_DIM}",
+    "HYPEREVAL_LLM_MIN_INTERVAL_SECONDS": "0.1"
+  }
+}
