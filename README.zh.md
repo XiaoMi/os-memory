@@ -4,7 +4,7 @@
 
 [English](README.md) · [中文](README.zh.md)
 
-[![观看 OS-Memory 介绍视频（5 分 30 秒）](docs/assets/hypermemory-demo-poster.jpg)](docs/assets/hypermemory-demo.mp4)
+[![观看 OS-Memory 介绍视频（5 分 30 秒）](docs/assets/os-memory-demo-zh-poster.jpg)](docs/assets/os-memory-demo-zh.mp4)
 
 本说明书面向需要把个人数据接入 OS-Memory、并在自己的应用或 agent 中使用记忆的开发者，依次介绍系统的用途、安装方法、各类数据的接入方式、全部接口，以及如何在 PMM-Bench 上评测。
 

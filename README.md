@@ -4,7 +4,7 @@
 
 [English](README.md) · [中文](README.zh.md)
 
-[![Watch the OS-Memory introduction (5 min 30 s)](docs/assets/hypermemory-demo-poster.jpg)](docs/assets/hypermemory-demo.mp4)
+[![Watch the OS-Memory introduction (6 min 9 s)](docs/assets/os-memory-demo-en-poster.jpg)](docs/assets/os-memory-demo-en.mp4)
 
 This guide is for developers who feed personal device data into OS-Memory and use the resulting memory in their own applications or agents. It covers what the system does, how to install it, how to feed each kind of data, every interface, and how to evaluate on PMM-Bench.
 
